@@ -1,5 +1,6 @@
 import * as path from 'node:path';
 import * as os from 'node:os';
+import { resourceEnvironment } from '../resource-management/environment.ts';
 
 export const APP_DIR = path.join(os.homedir(), 'Library', 'Developer', 'XcodeBuildMCP');
 
@@ -30,7 +31,8 @@ export interface WorkspaceFilesystemLayout {
 }
 
 export function getXcodeBuildMCPAppDir(): string {
-  return appDirOverrideForTests ?? APP_DIR;
+  const managed = resourceEnvironment();
+  return appDirOverrideForTests ?? (managed ? path.join(managed.stateRoot, 'runtime') : APP_DIR);
 }
 
 export function getWorkspacesDir(): string {

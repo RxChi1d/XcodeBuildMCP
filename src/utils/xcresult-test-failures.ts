@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { log } from './logger.ts';
 import type { TestFailureFragment } from '../types/domain-fragments.ts';
 import type { Counts } from '../types/domain-results.ts';
+import type { CommandExecutor, CommandResponse } from './command.ts';
 import { parseRawTestName } from './xcodebuild-line-parsers.ts';
 
 interface XcresultTestNode {
@@ -24,6 +25,13 @@ interface XcresultTestSummary {
 
 function isSummaryCount(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0;
+}
+
+function throwIfXcresultProcessWasSignaled(response: CommandResponse, operation: string): void {
+  const signalCode = response.process?.signalCode;
+  if (signalCode !== null && signalCode !== undefined) {
+    throw new Error(`${operation} interrupted by signal: ${signalCode}`);
+  }
 }
 
 export function parseXcresultTestSummaryCounts(raw: string): Counts | null {
@@ -71,28 +79,50 @@ export function extractTestSummaryCountsFromXcresult(xcresultPath: string): Coun
   }
 }
 
-export function extractTestFailuresFromXcresult(xcresultPath: string): TestFailureFragment[] {
+export function parseXcresultTestFailures(raw: string): TestFailureFragment[] {
   try {
-    const output = execFileSync(
-      'xcrun',
-      ['xcresulttool', 'get', 'test-results', 'tests', '--path', xcresultPath],
-      { encoding: 'utf8', timeout: 10_000, stdio: ['ignore', 'pipe', 'pipe'] },
-    );
-
-    const results = JSON.parse(output) as XcresultTestResults;
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      !parsed ||
+      typeof parsed !== 'object' ||
+      !('testNodes' in parsed) ||
+      !Array.isArray((parsed as XcresultTestResults).testNodes)
+    ) {
+      return [];
+    }
+    const results = parsed as XcresultTestResults;
     const fragments: TestFailureFragment[] = [];
 
-    function walk(node: XcresultTestNode, suiteContext?: string): void {
-      const parsedNodeName = parseRawTestName(node.name);
+    function walk(node: unknown, suiteContext?: string): void {
+      if (!node || typeof node !== 'object') {
+        throw new Error('Invalid test node');
+      }
+      const testNode = node as XcresultTestNode;
+      if (typeof testNode.name !== 'string' || typeof testNode.nodeType !== 'string') {
+        throw new Error('Invalid test node name or nodeType');
+      }
+      if (testNode.children !== undefined && !Array.isArray(testNode.children)) {
+        throw new Error('Invalid test node children');
+      }
+
+      const parsedNodeName = parseRawTestName(testNode.name);
       const nextSuiteContext =
-        node.nodeType === 'Test Case'
+        testNode.nodeType === 'Test Case'
           ? suiteContext
           : (parsedNodeName.suiteName ??
-            (node.nodeType === 'Test Suite' ? node.name.replaceAll('_', ' ') : suiteContext));
+            (testNode.nodeType === 'Test Suite'
+              ? testNode.name.replaceAll('_', ' ')
+              : suiteContext));
 
-      if (node.nodeType === 'Test Case' && node.result === 'Failed' && node.children) {
-        for (const child of node.children) {
+      if (testNode.nodeType === 'Test Case' && testNode.result === 'Failed' && testNode.children) {
+        for (const child of testNode.children) {
+          if (!child || typeof child !== 'object') {
+            throw new Error('Invalid child failure node');
+          }
           if (child.nodeType === 'Failure Message') {
+            if (typeof child.name !== 'string') {
+              throw new Error('Invalid failure message node name');
+            }
             const parsed = parseXcresultFailureMessage(child.name);
             const { suiteName, testName } = parsedNodeName;
             fragments.push({
@@ -107,8 +137,8 @@ export function extractTestFailuresFromXcresult(xcresultPath: string): TestFailu
           }
         }
       }
-      if (node.children) {
-        for (const child of node.children) {
+      if (testNode.children) {
+        for (const child of testNode.children) {
           walk(child, nextSuiteContext);
         }
       }
@@ -119,11 +149,62 @@ export function extractTestFailuresFromXcresult(xcresultPath: string): TestFailu
     }
 
     return fragments;
+  } catch {
+    return [];
+  }
+}
+
+export function extractTestFailuresFromXcresult(xcresultPath: string): TestFailureFragment[] {
+  try {
+    const output = execFileSync(
+      'xcrun',
+      ['xcresulttool', 'get', 'test-results', 'tests', '--path', xcresultPath],
+      { encoding: 'utf8', timeout: 10_000, stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+
+    return parseXcresultTestFailures(output);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     log('debug', `Failed to extract test failures from xcresult: ${message}`);
     return [];
   }
+}
+
+export async function extractTestSummaryCountsFromXcresultAsync(
+  executor: CommandExecutor,
+  xcresultPath: string,
+): Promise<Counts | null> {
+  const command = [
+    'xcrun',
+    'xcresulttool',
+    'get',
+    'test-results',
+    'summary',
+    '--path',
+    xcresultPath,
+    '--compact',
+  ];
+  const response = await executor(command, 'Extract Test Summary', false);
+  throwIfXcresultProcessWasSignaled(response, 'xcresult test summary extraction');
+  if (!response.success) {
+    log('debug', `Failed to extract test summary from xcresult: exit ${response.exitCode}`);
+    return null;
+  }
+  return parseXcresultTestSummaryCounts(response.output);
+}
+
+export async function extractTestFailuresFromXcresultAsync(
+  executor: CommandExecutor,
+  xcresultPath: string,
+): Promise<TestFailureFragment[]> {
+  const command = ['xcrun', 'xcresulttool', 'get', 'test-results', 'tests', '--path', xcresultPath];
+  const response = await executor(command, 'Extract Test Failures', false);
+  throwIfXcresultProcessWasSignaled(response, 'xcresult test failure extraction');
+  if (!response.success) {
+    log('debug', `Failed to extract test failures from xcresult: exit ${response.exitCode}`);
+    return [];
+  }
+  return parseXcresultTestFailures(response.output);
 }
 
 export function parseXcresultFailureMessage(raw: string): { message: string; location?: string } {

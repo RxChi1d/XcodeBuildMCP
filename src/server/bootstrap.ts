@@ -15,6 +15,7 @@ import { getDefaultCommandExecutor } from '../utils/command.ts';
 import type { PredicateContext } from '../visibility/predicate-types.ts';
 import { createStartupProfiler, getStartupProfileNowMs } from './startup-profiler.ts';
 import { runWorkspaceFilesystemLifecycleSweep } from '../utils/workspace-filesystem-lifecycle.ts';
+import { resourceEnvironment } from '../resource-management/environment.ts';
 
 export interface BootstrapOptions {
   enabledWorkflows?: string[];
@@ -113,7 +114,7 @@ export async function bootstrapServer(
   profiler.mark('registerWorkflowsFromManifest', stageStartMs);
 
   const resolvedWorkflows = getRegisteredWorkflows();
-  const xcodeIdeEnabled = resolvedWorkflows.includes('xcode-ide');
+  const xcodeIdeEnabled = !resourceEnvironment() && resolvedWorkflows.includes('xcode-ide');
   const xcodeToolsBridge = xcodeIdeEnabled ? getXcodeToolsBridgeManager(server) : null;
   xcodeToolsBridge?.setWorkflowEnabled(xcodeIdeEnabled);
 
@@ -123,6 +124,7 @@ export async function bootstrapServer(
 
   return {
     runDeferredInitialization: async (options = {}): Promise<void> => {
+      if (resourceEnvironment()) return;
       const deferredProfiler = createStartupProfiler('bootstrap-deferred');
       const isShutdownRequested = options.isShutdownRequested;
 

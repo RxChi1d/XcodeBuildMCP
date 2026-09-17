@@ -5,7 +5,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import path from 'node:path';
 import { homedir } from 'node:os';
-import { createMockExecutor } from '../../test-utils/mock-executors.ts';
+import {
+  createMockExecutor,
+  createMockCommandResponse,
+  type CommandExecutor,
+} from '../../test-utils/mock-executors.ts';
 import { executeXcodeBuildCommand } from '../build-utils.ts';
 import { XcodePlatform } from '../xcode.ts';
 import type { XcodebuildPipeline } from '../xcodebuild-pipeline.ts';
@@ -579,6 +583,100 @@ describe('build-utils Sentry Classification', () => {
       expect(capturedCommand).toBeDefined();
       expect(capturedCommand).toContain(expectedProjectPath);
       expect(capturedCommand).toContain(expectedDerivedDataPath);
+    });
+  });
+
+  describe('Simulator Destination UUID Casing and Matching', () => {
+    const expectedUpper = '65FAA1DC-6DC9-456D-A88E-3CF5A516F95B';
+    const testCases = [
+      { type: 'lowercase', input: '65faa1dc-6dc9-456d-a88e-3cf5a516f95b' },
+      { type: 'mixed-case', input: '65FaA1Dc-6Dc9-456D-a88e-3Cf5A516F95b' },
+      { type: 'uppercase', input: '65FAA1DC-6DC9-456D-A88E-3CF5A516F95B' },
+    ];
+
+    testCases.forEach(({ type, input }) => {
+      it(`normalizes ${type} simulatorId to uppercase at xcodebuild command boundary and satisfies case-sensitive executor`, async () => {
+        let capturedCommand: string[] | undefined;
+        // Mock executor simulates real xcodebuild / CoreSimulator case-sensitive matching
+        const mockExecutor: CommandExecutor = async (command) => {
+          capturedCommand = command;
+          const destIdx = command.indexOf('-destination');
+          const dest = destIdx !== -1 ? command[destIdx + 1] : '';
+          const match = dest.match(/id=([^,]+)/);
+          if (match && match[1] !== expectedUpper) {
+            return createMockCommandResponse({
+              success: false,
+              exitCode: 70,
+              error: `xcodebuild: error: Unable to find a device matching the provided destination specifier: { ${dest} }`,
+              output: '',
+            });
+          }
+          return createMockCommandResponse({
+            success: true,
+            exitCode: 0,
+            output: '** BUILD SUCCEEDED **',
+          });
+        };
+
+        const result = await executeXcodeBuildCommand(
+          {
+            scheme: 'TestApp',
+            projectPath: '/path/to/TestApp.xcodeproj',
+          },
+          {
+            platform: XcodePlatform.iOSSimulator,
+            simulatorId: input,
+            logPrefix: 'iOS Simulator Build',
+          },
+          false,
+          'build',
+          mockExecutor,
+          undefined,
+          createMockPipeline(),
+        );
+
+        expect(result.isError).toBeFalsy();
+        expect(capturedCommand).toBeDefined();
+        const destIdx = capturedCommand!.indexOf('-destination');
+        expect(destIdx).toBeGreaterThan(-1);
+        expect(capturedCommand![destIdx + 1]).toBe(`platform=iOS Simulator,id=${expectedUpper}`);
+      });
+    });
+
+    it('preserves physical deviceId casing without uppercase normalization', async () => {
+      let capturedCommand: string[] | undefined;
+      const mockExecutor: CommandExecutor = createMockExecutor({
+        success: true,
+        exitCode: 0,
+        output: '** BUILD SUCCEEDED **',
+        onExecute: (command) => {
+          capturedCommand = command;
+        },
+      });
+
+      const physicalId = '00008101-001234567890abcdef';
+      const result = await executeXcodeBuildCommand(
+        {
+          scheme: 'TestApp',
+          projectPath: '/path/to/TestApp.xcodeproj',
+        },
+        {
+          platform: XcodePlatform.iOS,
+          deviceId: physicalId,
+          logPrefix: 'iOS Device Build',
+        },
+        false,
+        'build',
+        mockExecutor,
+        undefined,
+        createMockPipeline(),
+      );
+
+      expect(result.isError).toBeFalsy();
+      expect(capturedCommand).toBeDefined();
+      const destIdx = capturedCommand!.indexOf('-destination');
+      expect(destIdx).toBeGreaterThan(-1);
+      expect(capturedCommand![destIdx + 1]).toBe(`platform=iOS,id=${physicalId}`);
     });
   });
 });

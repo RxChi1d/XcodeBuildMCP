@@ -2,6 +2,7 @@ import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server
 import type { CallToolResult, Tool, ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 import * as z from 'zod';
 import { jsonSchemaToZod } from './jsonschema-to-zod.ts';
+import { resourceEnvironment } from '../../resource-management/environment.ts';
 
 export type CallRemoteTool = (
   remoteToolName: string,
@@ -113,6 +114,8 @@ export class XcodeToolsProxyRegistry {
         },
       },
       async (args: unknown) => {
+        if (resourceEnvironment())
+          throw new Error('Xcode bridge is unsupported with managed resources');
         const params = (args ?? {}) as Record<string, unknown>;
         return callRemoteTool(tool.name, params);
       },

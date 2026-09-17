@@ -11,6 +11,11 @@ import {
   type DaemonRegistryEntry,
 } from '../daemon/daemon-registry.ts';
 import { isPidAlive } from '../utils/process-liveness.ts';
+import { assertManagedSocketPath } from '../daemon/socket-path.ts';
+import {
+  resourceEnvironment,
+  assertResourceNamespace,
+} from '../resource-management/environment.ts';
 
 /**
  * Default timeout for daemon startup in milliseconds.
@@ -87,6 +92,7 @@ export function getDaemonExecutablePath(): string {
  * Uses registry ownership metadata to stop the process before unregistering daemon files.
  */
 export async function forceStopDaemon(socketPath: string): Promise<void> {
+  assertManagedSocketPath(socketPath);
   const entry = findDaemonRegistryEntryBySocketPath(socketPath);
   if (!entry) {
     throw new Error(
@@ -132,6 +138,7 @@ export interface StartDaemonBackgroundOptions {
  * Does not wait for the daemon to be ready.
  */
 export function startDaemonBackground(opts: StartDaemonBackgroundOptions): void {
+  assertManagedSocketPath(opts.socketPath, opts.workspaceRoot);
   const daemonPath = getDaemonExecutablePath();
 
   const child = spawn(process.execPath, [daemonPath], {
@@ -171,7 +178,8 @@ export async function waitForDaemonReady(opts: WaitForDaemonReadyOptions): Promi
   while (Date.now() - startTime < opts.timeoutMs) {
     try {
       // Use status() to confirm protocol handler is ready (not just connect)
-      await client.status();
+      const status = await client.status();
+      if (resourceEnvironment()) assertResourceNamespace(status.resourceNamespace);
       return; // Success
     } catch {
       // Not ready yet, wait and retry
@@ -205,9 +213,11 @@ export async function ensureDaemonRunning(opts: EnsureDaemonRunningOptions): Pro
   const isRunning = await client.isRunning();
   if (isRunning) {
     try {
-      await client.status();
+      const status = await client.status();
+      if (resourceEnvironment()) assertResourceNamespace(status.resourceNamespace);
       return;
     } catch (error) {
+      if (resourceEnvironment()) throw error;
       if (error instanceof DaemonVersionMismatchError) {
         await forceStopDaemon(opts.socketPath);
       } else {
@@ -239,6 +249,7 @@ export interface StartDaemonForegroundOptions {
  * Used for debugging. The function returns when the daemon exits.
  */
 export function startDaemonForeground(opts: StartDaemonForegroundOptions): Promise<number> {
+  assertManagedSocketPath(opts.socketPath, opts.workspaceRoot);
   const daemonPath = getDaemonExecutablePath();
 
   return new Promise<number>((resolve) => {

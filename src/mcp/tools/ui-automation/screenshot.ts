@@ -73,7 +73,7 @@ async function getSimulatorDeviceForSimulatorId(
 
   const data = JSON.parse(result.output) as SimctlDeviceList;
   for (const devices of Object.values(data.devices)) {
-    const match = devices.find((device) => device.udid === simulatorId);
+    const match = devices.find((device) => device.udid.toLowerCase() === simulatorId.toLowerCase());
     if (match) {
       return match;
     }

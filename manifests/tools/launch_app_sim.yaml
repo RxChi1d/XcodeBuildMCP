@@ -3,10 +3,10 @@ module: mcp/tools/simulator/launch_app_sim
 names:
   mcp: launch_app_sim
   cli: launch-app
-description: Launch app on simulator. Runtime logs are captured automatically and the log file path is included in the response.
+description: Launch app on simulator. In managed mode, requires an operation lease and explicit bundle ID, restarts the app, and returns its PID without background log capture. Otherwise, runtime logs are captured automatically and the log file path is included in the response.
 outputSchema:
   schema: xcodebuildmcp.output.launch-result
-  version: "2"
+  version: '2'
 annotations:
   title: Launch App Simulator
   readOnlyHint: false

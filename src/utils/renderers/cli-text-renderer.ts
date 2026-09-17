@@ -440,7 +440,34 @@ function createCliTextProcessor(options: CliTextProcessorOptions): TranscriptRen
     finalize(): void {
       flushParserStates();
       if (structuredOutput) {
-        if (!sawIncomingNonHeaderEvent) {
+        if (structuredOutput.result.kind === 'resource-binding') {
+          const result = structuredOutput.result;
+          processItem({
+            type: 'text-block',
+            text: result.didError
+              ? `Simulator provisioning failed: ${result.error}`
+              : [
+                  `Simulator: ${result.simulatorId}`,
+                  `Device type: ${result.deviceType}`,
+                  `Runtime: ${result.runtime}`,
+                  'Binding ready. Begin an operation before using the Simulator.',
+                ].join('\n'),
+          });
+        } else if (structuredOutput.result.kind === 'resource-operation') {
+          const result = structuredOutput.result;
+          processItem({
+            type: 'text-block',
+            text: [
+              `Operation: ${result.requestId}`,
+              `Session: ${result.sessionId}`,
+              `Simulator: ${result.simulatorId}`,
+              `State: ${result.state}`,
+              `Active work: ${result.activityCount}`,
+              ...(result.token ? [`Token: ${result.token}`] : []),
+              ...(result.reason ? [`Reason: ${result.reason}`] : []),
+            ].join('\n'),
+          });
+        } else if (!sawIncomingNonHeaderEvent) {
           const structuredItems = renderDomainResultTextItems(
             structuredOutput.result,
             structuredOutput.renderHints,

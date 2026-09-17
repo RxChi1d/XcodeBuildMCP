@@ -25,6 +25,7 @@ export interface RenderSession {
 export interface RenderHints {
   headerTitle?: string;
   runtimeSnapshot?: {
+    managedOperation?: boolean;
     suppressedTargetRefs?: readonly string[];
   };
 }
@@ -37,6 +38,9 @@ export interface StructuredToolOutput {
 }
 
 export interface ToolHandlerContext {
+  managedOperation?: {
+    run(params: unknown, invoke: () => Promise<void>): Promise<void>;
+  };
   emit: (fragment: AnyFragment) => void;
   attach: (image: ImageAttachment) => void;
   nextStepParams?: NextStepParamsMap;

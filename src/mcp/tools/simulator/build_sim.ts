@@ -43,6 +43,7 @@ import {
   markTestProductsPathCompleted,
 } from '../../../utils/test-products-path.ts';
 import { createBuildInvocationFragment } from '../../../utils/xcodebuild-pipeline.ts';
+import { isCommandSupervised } from '../../../resource-management/execution.ts';
 
 const baseOptions = {
   scheme: z.string().describe('The scheme to use (Required)'),
@@ -216,15 +217,22 @@ export function createBuildSimExecutor(
     }
 
     const started = createDomainStreamingPipeline('build_sim', 'BUILD', ctx, 'build-result');
-    const buildResult = await executeXcodeBuildCommand(
-      resolved.sharedBuildParams,
-      resolved.platformOptions,
-      params.preferXcodebuild ?? false,
-      resolved.buildAction,
-      executor,
-      undefined,
-      started.pipeline,
-    );
+    let buildResult;
+    try {
+      buildResult = await executeXcodeBuildCommand(
+        resolved.sharedBuildParams,
+        resolved.platformOptions,
+        params.preferXcodebuild ?? false,
+        resolved.buildAction,
+        executor,
+        undefined,
+        started.pipeline,
+        isCommandSupervised() ? { propagateInfrastructureErrors: true } : undefined,
+      );
+    } catch (error) {
+      started.pipeline.finalize(false, Date.now() - started.startedAt);
+      throw error;
+    }
     const succeeded = !buildResult.isError;
 
     if (resolved.isManagedTestProductsPath) {
@@ -266,6 +274,13 @@ export async function build_simLogic(
   const result = await executeBuildSim(params, executionContext);
 
   setXcodebuildStructuredOutput(ctx, 'build-result', result, '3');
+
+  if (ctx.managedOperation) {
+    ctx.nextSteps = [];
+    delete ctx.nextStepParams;
+    delete ctx.nextStepConditionKeys;
+    return;
+  }
 
   if (!result.didError) {
     if (prepared.testProductsPath) {

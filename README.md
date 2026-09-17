@@ -65,6 +65,10 @@ For further information on installing skills, see [Agent Skills](https://xcodebu
 - XcodeBuildMCP requests xcodebuild to skip macro validation to avoid errors when building projects that use Swift Macros.
 - Device tools require code signing to be configured in Xcode. See [Device Code Signing](https://xcodebuildmcp.com/docs/device-signing).
 
+## Experimental managed Simulator operations
+
+Managed Simulator provisioning and worktree-scoped operation leases are experimental and opt-in. See the [managed Simulator operations guide](src/resource-management/README.md) for configuration, lease lifecycle, tool contracts, and limitations.
+
 ## Privacy
 
 XcodeBuildMCP uses Sentry for internal runtime error telemetry only. For details and opt-out instructions, see [Privacy & Telemetry](https://xcodebuildmcp.com/docs/privacy).

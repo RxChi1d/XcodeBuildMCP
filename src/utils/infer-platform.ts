@@ -118,7 +118,11 @@ function resolveCachedPlatform(params: InferPlatformParams): SimulatorPlatform |
     return defaults.simulatorPlatform;
   }
 
-  if (hasExplicitId && defaults.simulatorId && params.simulatorId === defaults.simulatorId) {
+  if (
+    hasExplicitId &&
+    defaults.simulatorId &&
+    params.simulatorId?.toLowerCase() === defaults.simulatorId.toLowerCase()
+  ) {
     return defaults.simulatorPlatform;
   }
 
@@ -178,7 +182,9 @@ async function inferPlatformFromSimctl(
       };
 
       if (simulatorId) {
-        const matchesId = typeof current.udid === 'string' && current.udid === simulatorId;
+        const matchesId =
+          typeof current.udid === 'string' &&
+          current.udid.toLowerCase() === simulatorId.toLowerCase();
         if (!matchesId) continue;
       } else {
         const matchesName = typeof current.name === 'string' && current.name === simulatorName;

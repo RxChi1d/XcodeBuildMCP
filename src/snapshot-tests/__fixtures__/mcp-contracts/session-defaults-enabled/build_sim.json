@@ -1,6 +1,6 @@
 {
   "annotations": {"destructiveHint":false,"openWorldHint":false,"readOnlyHint":false,"title":"Build Simulator"},
-  "description": "Build for iOS sim (compile-only, no launch).",
+  "description": "Build for iOS sim (compile-only, no launch). In managed mode, executes standard supervised xcodebuild under an operation lease and requires explicit projectPath/workspacePath, scheme, simulatorId, and operation credentials. Non-empty extraArgs, buildForTesting=true, testProductsPath, and preferXcodebuild=false are rejected. Operation remains held after successful builds and confirmed compile failures until explicit end; uncertain command completion or open streams block the lease. Supervision covers direct child exit and closed streams, without process-tree guarantees for user build scripts. build_run_sim remains unsupported in managed mode.",
   "execution": {"taskSupport":"forbidden"},
   "inputSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",

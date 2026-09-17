@@ -2,9 +2,25 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added experimental opt-in Simulator operation leases with isolated storage, persistent worktree bindings, MCP/CLI/daemon management, and target enforcement for boot readiness, installation, app launch, screenshots, UI snapshots, taps, and text input. Explicit provisioning creates and verifies a dedicated device once per worktree, retaining uncertain creation records instead of automatically replacing devices. Managed boot holds the operation until readiness is verified and blocks handoff on uncertain completion. Managed app launch returns its PID without background log capture and retains uncertain launch outcomes. Managed UI references expire across refreshes, handoffs, and intervening runtime calls; uncertain commands prevent follow-up actions. Unsupported tools, including batch UI actions and background capture, remain blocked in managed mode.
+- Added managed compile-only build support for `build_sim` under experimental Simulator operation leases, requiring explicit source inputs, scheme, and operation credentials. Managed builds run standard supervised `xcodebuild` on the bound simulator, invalidate prior UI snapshots, require explicit release on success or compile failure, and reject extra arguments, test preparation, or incremental build overrides.
+- Added managed two-phase `test_sim` support under experimental Simulator operation leases, with explicit source and operation credentials, serialized supervised test execution, asynchronous result metadata, dedicated Simulator shutdown verification, and explicit cleanup semantics.
+
 ### Changed
 
 - Dictionary-shaped MCP inputs now use client-compatible wire representations ([#491](https://github.com/getsentry/XcodeBuildMCP/issues/491)). The `env` and `testRunnerEnv` inputs on build, launch, test, and session-default tools are arrays of `{ "key": "...", "value": "..." }` entries, while `xcode_ide_call_tool.arguments` is a JSON object string. XcodeBuildMCP converts these values to their existing internal objects only after MCP input validation.
+
+### Fixed
+
+- Fixed UI automation reporting a missing Simulator when its UUID contains lowercase letters, including UUIDs returned by managed operation leases.
+- Fixed xcodebuild reporting "Unable to find device" when simulatorId contains lowercase letters by normalizing the destination UUID to uppercase at the xcodebuild command boundary.
+- Fixed managed test execution rejecting Xcode's invalid `-test-iterations 1` flag by preserving project and test-plan repetition settings while retaining serialized simulator destinations.
+- Fixed managed Phase 1 test failures with confirmed numeric nonzero exits being misclassified as uncertain; Phase 2 continues to accept only exits 0 and 65 as known outcomes.
+- Fixed managed build and test admission to require exactly one explicit nonblank project or workspace input together with a nonblank scheme and bound Simulator UUID.
+- Fixed daemon socket resolution so an explicit `XCODEBUILDMCP_SOCKET` is honored before ordinary workspace discovery, while managed mode continues to validate the isolated workspace and resource namespace.
+- Fixed managed activity completion to persist retry and replay receipts before compacting the operation header, and to wait through lock contention instead of abandoning finalization at the normal 10-second transaction deadline.
 
 ## [2.7.0]
 

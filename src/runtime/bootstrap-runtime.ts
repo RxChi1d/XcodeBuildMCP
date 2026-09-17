@@ -13,6 +13,8 @@ import { scheduleSimulatorDefaultsRefresh } from '../utils/simulator-defaults-re
 import { expandHomePrefix } from '../utils/path.ts';
 import { resolveWorkspaceIdentity } from '../utils/workspace-identity.ts';
 import { configureRuntimeWorkspaceKey } from '../utils/runtime-instance.ts';
+import { resourceEnvironment } from '../resource-management/environment.ts';
+import { SimulatorResourceManager } from '../resource-management/manager.ts';
 
 export type RuntimeKind = 'cli' | 'daemon' | 'mcp';
 
@@ -73,6 +75,7 @@ function hydrateSessionDefaultsForMcp(
   }
 
   const activeDefaults = sessionStore.getAll();
+  if (resourceEnvironment()) return { hydrated: true, refreshScheduled: false };
   const revision = sessionStore.getRevision();
   const refreshScheduled = scheduleSimulatorDefaultsRefresh({
     expectedRevision: revision,
@@ -116,6 +119,7 @@ export async function bootstrapRuntime(
     try {
       process.chdir(cwdOverride);
     } catch (error) {
+      if (resourceEnvironment()) throw error;
       log(
         'warn',
         `XCODEBUILDMCP_CWD points at "${cwdOverride}" but chdir failed: ${
@@ -125,6 +129,8 @@ export async function bootstrapRuntime(
     }
   }
   const cwd = opts.cwd ?? process.cwd();
+  const managed = resourceEnvironment();
+  if (managed) await SimulatorResourceManager.open(managed);
   const fs = opts.fs ?? getDefaultFileSystemExecutor();
 
   const configResult = await initConfigStore({

@@ -7,6 +7,8 @@ import { transcriptEmitterStorage } from './transcript-context.ts';
 import { shellEscapeArg } from './shell-escape.ts';
 import type { FileSystemExecutor } from './FileSystemExecutor.ts';
 import type { CommandExecutor, CommandResponse, CommandExecOptions } from './CommandExecutor.ts';
+import { supervisedExecutor } from '../resource-management/execution.ts';
+import { resourceEnvironment } from '../resource-management/environment.ts';
 
 export type { CommandExecutor, CommandResponse, CommandExecOptions } from './CommandExecutor.ts';
 export type { FileSystemExecutor } from './FileSystemExecutor.ts';
@@ -320,7 +322,8 @@ export function __getRealFileSystemExecutor(): FileSystemExecutor {
 }
 
 export function getDefaultCommandExecutor(): CommandExecutor {
-  return _testCommandExecutorOverride ?? defaultExecutor;
+  const executor = _testCommandExecutorOverride ?? defaultExecutor;
+  return resourceEnvironment() ? supervisedExecutor(executor) : executor;
 }
 
 export function getDefaultFileSystemExecutor(): FileSystemExecutor {

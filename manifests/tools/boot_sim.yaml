@@ -3,10 +3,10 @@ module: mcp/tools/simulator/boot_sim
 names:
   mcp: boot_sim
   cli: boot
-description: Boot iOS simulator for manual/non-build flows. Not required before simulator build-and-run (build_run_sim).
+description: Boot iOS simulator for manual/non-build flows. Not required before simulator build-and-run (build_run_sim). In managed mode, requires an operation lease and waits for boot readiness.
 outputSchema:
   schema: xcodebuildmcp.output.simulator-action-result
-  version: "2"
+  version: '2'
 annotations:
   title: Boot Simulator
   readOnlyHint: false

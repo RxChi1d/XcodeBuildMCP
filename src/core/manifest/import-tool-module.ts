@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import type { ToolSchemaShape } from '../plugin-types.ts';
 import type { ToolHandlerContext } from '../../rendering/types.ts';
 import { getPackageRoot } from './load-manifest.ts';
+import { managedToolSchema, wrapManagedTool } from '../../resource-management/tool-gate.ts';
 
 export interface ImportedToolModule {
   schema: ToolSchemaShape;
@@ -50,12 +51,15 @@ export async function importToolModule(moduleId: string): Promise<ImportedToolMo
   }
 
   const result: ImportedToolModule = {
-    schema: mod.schema as ToolSchemaShape,
-    mcpSchema: (mod.mcpSchema ?? mod.schema) as ToolSchemaShape,
-    handler: mod.handler as (
-      params: Record<string, unknown>,
-      ctx?: ToolHandlerContext,
-    ) => Promise<unknown>,
+    schema: managedToolSchema(moduleId, mod.schema as ToolSchemaShape),
+    mcpSchema: managedToolSchema(moduleId, (mod.mcpSchema ?? mod.schema) as ToolSchemaShape),
+    handler: wrapManagedTool(
+      moduleId,
+      mod.handler as (
+        params: Record<string, unknown>,
+        ctx?: ToolHandlerContext,
+      ) => Promise<unknown>,
+    ),
   };
 
   moduleCache.set(moduleId, result);

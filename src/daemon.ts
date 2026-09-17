@@ -4,6 +4,7 @@ import net from 'node:net';
 import { dirname } from 'node:path';
 import { existsSync, mkdirSync, renameSync, statSync } from 'node:fs';
 import { bootstrapRuntime } from './runtime/bootstrap-runtime.ts';
+import { resourceEnvironment } from './resource-management/environment.ts';
 import { buildDaemonToolCatalogFromManifest } from './runtime/tool-catalog.ts';
 import { loadManifest } from './core/manifest/load-manifest.ts';
 import {
@@ -93,6 +94,8 @@ function rotateLogIfNeeded(logPath: string): void {
 function resolveDaemonLogPath(workspaceKey: string): string | null {
   const override = process.env.XCODEBUILDMCP_DAEMON_LOG_PATH?.trim();
   if (override) {
+    if (resourceEnvironment())
+      throw new Error('Managed resources do not support daemon log path overrides');
     return override;
   }
 
@@ -220,7 +223,7 @@ async function main(): Promise<void> {
     const daemonWorkflows = allWorkflowIds.filter(
       (workflowId) => !excludedWorkflows.includes(workflowId),
     );
-    const xcodeIdeWorkflowEnabled = daemonWorkflows.includes('xcode-ide');
+    const xcodeIdeWorkflowEnabled = !resourceEnvironment() && daemonWorkflows.includes('xcode-ide');
     const axeBinary = resolveAxeBinary();
     const axeAvailable = axeBinary !== null;
     const axeSource: 'env' | 'source' | 'bundled' | 'path' | 'unavailable' =
@@ -486,6 +489,7 @@ async function main(): Promise<void> {
       // a slow sweep cannot delay request serving. Request handlers must not assume orphans
       // have been cleaned at startup.
       setImmediate(() => {
+        if (resourceEnvironment()) return;
         void enrichSentryMetadata().catch((error) => {
           const message = error instanceof Error ? error.message : String(error);
           log('warn', `[Daemon] Failed to enrich Sentry metadata: ${message}`);

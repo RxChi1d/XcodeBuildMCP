@@ -9,6 +9,7 @@ import { resolveEffectiveDerivedDataPath } from './derived-data-path.ts';
 import { resolvePathFromCwd } from './path.ts';
 import type { XcodebuildPipeline } from './xcodebuild-pipeline.ts';
 import { createNoticeFragment } from './xcodebuild-output.ts';
+import { isCommandSupervised } from '../resource-management/execution.ts';
 
 export interface BuildCommandResult {
   content: Array<{ type: 'text'; text: string }>;
@@ -41,7 +42,7 @@ export async function executeXcodeBuildCommand(
 
   log('info', `Starting ${platformOptions.logPrefix} ${buildAction} for scheme ${params.scheme}`);
 
-  const isXcodemakeEnabledFlag = isXcodemakeEnabled();
+  const isXcodemakeEnabledFlag = !isCommandSupervised() && isXcodemakeEnabled();
   let xcodemakeAvailableFlag = false;
 
   if (isXcodemakeEnabledFlag && buildAction === 'build') {
@@ -110,7 +111,7 @@ export async function executeXcodeBuildCommand(
         destinationString = constructDestinationString(
           platformOptions.platform,
           undefined,
-          platformOptions.simulatorId,
+          platformOptions.simulatorId.toUpperCase(),
         );
       } else if (platformOptions.simulatorName) {
         destinationString = constructDestinationString(
@@ -236,7 +237,7 @@ export async function executeXcodeBuildCommand(
 
     return successResponse;
   } catch (error) {
-    if (executionOptions?.propagateInfrastructureErrors) {
+    if (executionOptions?.propagateInfrastructureErrors || isCommandSupervised()) {
       throw error;
     }
 

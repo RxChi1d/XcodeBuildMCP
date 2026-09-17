@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xcodebuildmcp.com/schemas/structured-output/xcodebuildmcp.output.resource-operation/1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "$ref": "https://xcodebuildmcp.com/schemas/structured-output/_defs/common.schema.json#/$defs/errorConsistency"
+    }
+  ],
+  "properties": {
+    "schema": {
+      "const": "xcodebuildmcp.output.resource-operation"
+    },
+    "schemaVersion": {
+      "const": "1"
+    },
+    "didError": {
+      "type": "boolean"
+    },
+    "error": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requestId": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "simulatorId": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "action": {
+          "enum": [
+            "begin",
+            "poll",
+            "status",
+            "end",
+            "cancel"
+          ]
+        },
+        "state": {
+          "enum": [
+            "waiting",
+            "active",
+            "closing",
+            "blocked",
+            "released",
+            "cancelled"
+          ]
+        },
+        "activityCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "action",
+        "requestId",
+        "sessionId",
+        "simulatorId",
+        "state",
+        "activityCount"
+      ]
+    },
+    "nextSteps": {
+      "$ref": "https://xcodebuildmcp.com/schemas/structured-output/_defs/common.schema.json#/$defs/nextSteps"
+    }
+  },
+  "required": [
+    "schema",
+    "schemaVersion",
+    "didError",
+    "error",
+    "data"
+  ]
+}

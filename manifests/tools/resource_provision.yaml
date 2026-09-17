@@ -1,0 +1,16 @@
+id: resource_provision
+module: mcp/tools/resource-management/resource_provision
+names:
+  mcp: resource_provision
+  cli: provision
+description: Create this worktree's dedicated Simulator on first use, or verify its existing binding. Requires explicit device type and runtime identifiers. Does not boot, replace, delete, or adopt an existing device. Begin an operation separately before using the Simulator.
+predicates:
+  - managedResourcesEnabled
+outputSchema:
+  schema: xcodebuildmcp.output.resource-binding
+  version: '1'
+annotations:
+  title: Provision Worktree Simulator
+  readOnlyHint: false
+  destructiveHint: false
+  openWorldHint: false

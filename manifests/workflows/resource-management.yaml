@@ -1,0 +1,12 @@
+id: resource-management
+title: Simulator Resource Management
+description: Explicit operation leases for a persistent worktree Simulator.
+targetPlatforms: []
+predicates:
+  - managedResourcesEnabled
+selection:
+  mcp:
+    autoInclude: true
+tools:
+  - resource_operation
+  - resource_provision
