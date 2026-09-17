@@ -8,6 +8,8 @@ import {
   resolveWorkspaceIdentity,
 } from '../utils/workspace-identity.ts';
 import { getWorkspaceFilesystemLayout } from '../utils/log-paths.ts';
+import { resourceEnvironment } from '../resource-management/environment.ts';
+import { getRuntimeInstance } from '../utils/runtime-instance.ts';
 
 export { resolveWorkspaceRoot, workspaceKeyForRoot, resolveWorkspaceIdentity };
 
@@ -26,13 +28,38 @@ export function setDaemonRunDirOverrideForTests(dir: string | null): void {
   daemonRunDirOverrideForTests = dir;
 }
 
-export function daemonDirForWorkspaceKey(key: string): string {
+export function daemonDirForWorkspaceKey(
+  key: string,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const managed = resourceEnvironment(env);
+  if (managed) {
+    return join(daemonRunDir(), `xbm-r-${shortWorkspaceHash(`${managed.namespace}:${key}`)}`);
+  }
   return join(daemonRunDir(), `xcodebuildmcp-${compactWorkspaceKey(key)}`);
 }
 
-export function socketPathForWorkspaceRoot(workspaceRoot: string): string {
+export function assertManagedSocketPath(
+  socketPath: string,
+  workspaceRoot?: string,
+  env: NodeJS.ProcessEnv = process.env,
+): void {
+  if (!resourceEnvironment(env)) return;
+  const key =
+    workspaceRoot === undefined
+      ? getRuntimeInstance().workspaceKey
+      : workspaceKeyForRoot(workspaceRoot);
+  if (socketPath !== join(daemonDirForWorkspaceKey(key, env), 'd.sock')) {
+    throw new Error('Managed resources require the isolated workspace daemon socket');
+  }
+}
+
+export function socketPathForWorkspaceRoot(
+  workspaceRoot: string,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
   const key = workspaceKeyForRoot(workspaceRoot);
-  return join(daemonDirForWorkspaceKey(key), 'd.sock');
+  return join(daemonDirForWorkspaceKey(key, env), 'd.sock');
 }
 
 export function registryPathForWorkspaceKey(key: string): string {
@@ -51,8 +78,7 @@ export interface GetSocketPathOptions {
 
 export function getSocketPath(opts?: GetSocketPathOptions): string {
   const env = opts?.env ?? process.env;
-
-  if (env.XCODEBUILDMCP_SOCKET) {
+  if (env.XCODEBUILDMCP_SOCKET && !resourceEnvironment(env)) {
     return env.XCODEBUILDMCP_SOCKET;
   }
 
@@ -62,7 +88,12 @@ export function getSocketPath(opts?: GetSocketPathOptions): string {
     projectConfigPath: opts?.projectConfigPath,
   });
 
-  return socketPathForWorkspaceRoot(workspaceRoot);
+  if (env.XCODEBUILDMCP_SOCKET) {
+    assertManagedSocketPath(env.XCODEBUILDMCP_SOCKET, workspaceRoot, env);
+    return env.XCODEBUILDMCP_SOCKET;
+  }
+
+  return socketPathForWorkspaceRoot(workspaceRoot, env);
 }
 
 function validateSocketDir(dir: string): void {

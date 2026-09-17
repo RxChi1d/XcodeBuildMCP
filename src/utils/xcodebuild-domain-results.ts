@@ -394,6 +394,7 @@ export function createTestDomainResult(options: {
   includeDetectedXcresult?: boolean;
   preflight?: TestPreflightResult;
   request: BuildInvocationRequest;
+  summaryCounts?: Counts | null;
 }): TestResultDomainResult {
   const { durationMs, pipelineResult } = finalizePipelineResult(options);
   const state = pipelineResult.state;
@@ -416,8 +417,11 @@ export function createTestDomainResult(options: {
     ...(xcresultPath ? { xcresultPath } : {}),
   };
   const counts =
-    (xcresultPath ? extractTestSummaryCountsFromXcresult(xcresultPath) : null) ??
-    createStateTestCounts(state);
+    (options.summaryCounts !== undefined
+      ? options.summaryCounts
+      : xcresultPath
+        ? extractTestSummaryCountsFromXcresult(xcresultPath)
+        : null) ?? createStateTestCounts(state);
   const result: TestResultDomainResult = {
     kind: 'test-result',
     request: options.request,

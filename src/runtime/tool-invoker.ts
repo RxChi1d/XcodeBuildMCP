@@ -19,6 +19,7 @@ import {
 import type { RenderSession, ToolHandlerContext } from '../rendering/types.ts';
 import { createRenderSession } from '../rendering/render.ts';
 import { createStructuredErrorOutput } from '../utils/structured-error.ts';
+import { resourceEnvironment } from '../resource-management/environment.ts';
 
 type BuiltTemplateNextStep = {
   step: NextStep;
@@ -400,7 +401,7 @@ export class DefaultToolInvoker implements ToolInvoker {
       context.captureInvocationMetric('completed');
       context.consumeResult(daemonResult);
     } catch (error) {
-      if (error instanceof DaemonVersionMismatchError) {
+      if (error instanceof DaemonVersionMismatchError && !resourceEnvironment()) {
         log('info', `[infra/tool-invoker] ${context.label} daemon protocol mismatch, restarting`);
         try {
           await forceStopDaemon(socketPath);
@@ -482,6 +483,10 @@ export class DefaultToolInvoker implements ToolInvoker {
     const xcodeIdeRemoteToolName = tool.xcodeIdeRemoteToolName;
     const isDynamicXcodeIdeTool =
       tool.workflow === 'xcode-ide' && typeof xcodeIdeRemoteToolName === 'string';
+
+    if (resourceEnvironment() && isDynamicXcodeIdeTool) {
+      throw new Error('Xcode bridge is unsupported with managed resources');
+    }
 
     if (opts.runtime === 'cli' && isDynamicXcodeIdeTool) {
       transport = 'xcode-ide-daemon';

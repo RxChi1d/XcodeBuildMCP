@@ -259,6 +259,11 @@ export function createXcodebuildPipeline(options: PipelineOptions): XcodebuildPi
     },
   });
 
+  type FinalizeOutcome =
+    | { kind: 'success'; result: PipelineResult }
+    | { kind: 'failure'; error: unknown };
+  let finalizeOutcome: FinalizeOutcome | null = null;
+
   return {
     onStdout(chunk: string): void {
       logCapture.write(chunk);
@@ -284,22 +289,39 @@ export function createXcodebuildPipeline(options: PipelineOptions): XcodebuildPi
       durationMs?: number,
       _finalizeOptions?: PipelineFinalizeOptions,
     ): PipelineResult {
-      parser.flush();
-      logCapture.close();
-
-      const debugPath = debugCapture.flush();
-      if (debugPath) {
-        appLog(
-          'info',
-          `[Pipeline] ${debugCapture.count} unrecognized parser lines written to ${debugPath}`,
-        );
+      if (finalizeOutcome) {
+        if (finalizeOutcome.kind === 'success') {
+          return finalizeOutcome.result;
+        }
+        throw finalizeOutcome.error;
       }
 
-      const finalState = runState.finalize(succeeded, durationMs);
+      try {
+        try {
+          parser.flush();
+        } finally {
+          logCapture.close();
+        }
 
-      return {
-        state: finalState,
-      };
+        const debugPath = debugCapture.flush();
+        if (debugPath) {
+          appLog(
+            'info',
+            `[Pipeline] ${debugCapture.count} unrecognized parser lines written to ${debugPath}`,
+          );
+        }
+
+        const finalState = runState.finalize(succeeded, durationMs);
+
+        const result: PipelineResult = {
+          state: finalState,
+        };
+        finalizeOutcome = { kind: 'success', result };
+        return result;
+      } catch (error) {
+        finalizeOutcome = { kind: 'failure', error };
+        throw error;
+      }
     },
 
     highestStageRank(): number {

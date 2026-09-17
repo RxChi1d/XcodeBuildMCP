@@ -1,4 +1,5 @@
 import type { RenderHints, ToolHandlerContext } from '../../../../rendering/types.ts';
+import { isCommandSupervised } from '../../../../resource-management/execution.ts';
 import type {
   BasicDiagnostics,
   CapturePayload,
@@ -232,6 +233,7 @@ export function mapAxeCommandError(
   message: string;
   diagnostics?: BasicDiagnostics;
 } {
+  if (isCommandSupervised() && !(error instanceof AxeError)) throw error;
   if (error instanceof DependencyError) {
     return { message: messages.dependencyFailureMessage ?? AXE_NOT_AVAILABLE_MESSAGE };
   }

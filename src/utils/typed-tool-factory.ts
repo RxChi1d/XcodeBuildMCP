@@ -57,7 +57,10 @@ function createValidatedHandler<TParams, TContext>(
 
     try {
       const validatedParams = schema.parse(args);
-      await handlerContextStorage.run(ctx, () => logicFunction(validatedParams, context));
+      const invoke = (): Promise<void> =>
+        handlerContextStorage.run(ctx, () => logicFunction(validatedParams, context));
+      if (ctx.managedOperation) await ctx.managedOperation.run(validatedParams, invoke);
+      else await invoke();
     } catch (error) {
       if (error instanceof z.ZodError) {
         const details = `Invalid parameters:\n${formatZodIssues(error)}`;
@@ -315,7 +318,10 @@ function createSessionAwareHandler<TParams, TContext>(opts: {
       }
 
       const validated = internalSchema.parse(merged);
-      await handlerContextStorage.run(ctx, () => logicFunction(validated, context));
+      const invoke = (): Promise<void> =>
+        handlerContextStorage.run(ctx, () => logicFunction(validated, context));
+      if (ctx.managedOperation) await ctx.managedOperation.run(validated, invoke);
+      else await invoke();
     } catch (error) {
       if (error instanceof z.ZodError) {
         const details = `Invalid parameters:\n${formatZodIssues(error)}`;

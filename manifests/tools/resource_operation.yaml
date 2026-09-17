@@ -1,0 +1,16 @@
+id: resource_operation
+module: mcp/tools/resource-management/resource_operation
+names:
+  mcp: resource_operation
+  cli: operation
+description: Begin, inspect, poll, end, or cancel an operation on this worktree's bound Simulator. Retain the returned credentials across calls; explicitly end after all work is finished. Does not provision a Simulator.
+predicates:
+  - managedResourcesEnabled
+outputSchema:
+  schema: xcodebuildmcp.output.resource-operation
+  version: '1'
+annotations:
+  title: Manage Simulator Operation
+  readOnlyHint: false
+  destructiveHint: false
+  openWorldHint: false

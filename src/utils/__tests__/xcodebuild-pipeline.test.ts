@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import * as logCaptureModule from '../xcodebuild-log-capture.ts';
 import {
   createXcodebuildPipeline,
   invocationRequestToHeaderParams,
@@ -367,6 +368,56 @@ describe('xcodebuild-pipeline', () => {
     for (const event of emittedEvents) {
       const parsed = JSON.parse(JSON.stringify(event));
       expect(parsed).toHaveProperty('fragment');
+    }
+  });
+
+  it('guarantees logCapture is closed and propagates original error when emit throws during finalize flush, and re-throws the same error on subsequent finalize without double-close', () => {
+    let closedCount = 0;
+    const origCreate = logCaptureModule.createLogCapture;
+    const logSpy = vi.spyOn(logCaptureModule, 'createLogCapture').mockImplementation((toolName) => {
+      const cap = origCreate(toolName);
+      const origClose = cap.close.bind(cap);
+      cap.close = () => {
+        closedCount++;
+        origClose();
+      };
+      return cap;
+    });
+
+    try {
+      const explosiveError = new Error('Explosive emit callback');
+      const pipeline = createXcodebuildPipeline({
+        operation: 'TEST',
+        toolName: 'test_sim',
+        params: { scheme: 'MyApp' },
+        emit: () => {
+          throw explosiveError;
+        },
+      });
+
+      pipeline.onStdout("Test Case '-[Suite testA]' passed (0.001 seconds)");
+
+      // First finalize: throws explosiveError, closes once
+      let firstError: unknown;
+      try {
+        pipeline.finalize(false, 1000);
+      } catch (err) {
+        firstError = err;
+      }
+      expect(firstError).toBe(explosiveError);
+      expect(closedCount).toBe(1);
+
+      // Second finalize: must rethrow the same failure without flushing or closing again
+      let secondError: unknown;
+      try {
+        pipeline.finalize(false, 1000);
+      } catch (err) {
+        secondError = err;
+      }
+      expect(secondError).toBe(explosiveError);
+      expect(closedCount).toBe(1);
+    } finally {
+      logSpy.mockRestore();
     }
   });
 });

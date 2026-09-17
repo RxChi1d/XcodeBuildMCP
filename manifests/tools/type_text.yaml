@@ -4,10 +4,10 @@ names:
   mcp: type_text
   cli: type-text
 description: >-
-  Type text into a UI element by elementRef from a current rs/1 runtime snapshot, optionally replacing existing field contents. elementRef is required; do not call with only text. Example input: {"elementRef":"e8","text":"London","replaceExisting":true}.
+  Type text into a UI element by elementRef from a current rs/1 runtime snapshot, optionally replacing existing field contents. In managed mode, requires operation credentials and a ref from this operation and runtime; use fresh refs returned after each action. elementRef is required; do not call with only text. Example input: {"elementRef":"e8","text":"London","replaceExisting":true}.
 outputSchema:
   schema: xcodebuildmcp.output.ui-action-result
-  version: "2"
+  version: '2'
 routing:
   stateful: true
 annotations:

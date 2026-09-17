@@ -53,6 +53,7 @@ export function createSimulatorTwoPhaseExecutionPlan(params: {
   extraArgs?: string[];
   preflight?: TestPreflightResult;
   resultBundlePath?: string;
+  supervised?: boolean;
 }): {
   buildArgs: string[];
   testArgs: string[];
@@ -65,9 +66,18 @@ export function createSimulatorTwoPhaseExecutionPlan(params: {
   const resultBundlePath = params.resultBundlePath ?? parsedArgs.resultBundlePath;
   const resultBundleArgs = resultBundlePath ? ['-resultBundlePath', resultBundlePath] : [];
 
+  const supervisedTestFlags = params.supervised
+    ? ['-parallel-testing-enabled', 'NO', '-maximum-concurrent-test-simulator-destinations', '1']
+    : [];
+
   return {
     buildArgs: [...parsedArgs.remainingArgs, ...selectedTestArgs],
-    testArgs: [...parsedArgs.remainingArgs, ...selectedTestArgs, ...resultBundleArgs],
+    testArgs: [
+      ...parsedArgs.remainingArgs,
+      ...selectedTestArgs,
+      ...supervisedTestFlags,
+      ...resultBundleArgs,
+    ],
     usesExactSelectors,
     ...(resultBundlePath ? { resultBundlePath } : {}),
   };

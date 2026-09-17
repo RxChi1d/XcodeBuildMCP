@@ -4,12 +4,14 @@
  */
 
 import type { PredicateFn, PredicateContext } from './predicate-types.ts';
+import { resourceEnvironment } from '../resource-management/environment.ts';
 
 /**
  * Registry of named predicate functions.
  * All predicates return true to show the tool/workflow, false to hide.
  */
 export const PREDICATES: Record<string, PredicateFn> = {
+  managedResourcesEnabled: (): boolean => resourceEnvironment() !== undefined,
   /**
    * Show only when debug mode is enabled in config.
    */

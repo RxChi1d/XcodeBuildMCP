@@ -292,6 +292,13 @@ export async function test_simLogic(
   const result = await executeTestSim(params, executionContext);
 
   setXcodebuildStructuredOutput(ctx, 'test-result', result, '3');
+
+  if (ctx.managedOperation) {
+    ctx.nextSteps = [];
+    delete ctx.nextStepParams;
+    delete ctx.nextStepConditionKeys;
+    return;
+  }
 }
 
 const publicSchemaObject = baseSchemaObject.omit({

@@ -1585,12 +1585,21 @@ function createCaptureResultItems(
       items.push(scrollAreasSection);
     }
     items.push(
-      createSection('Tips', [
-        '- Use target refs with tap, type_text, long_press, and touch.',
-        ...(scrollAreaCount > 0 ? ['- Use scroll refs with swipe.'] : []),
-        '- Refs are snapshot-specific; after snapshot_ui or wait_for_ui, use refs from the latest output.',
-        '- Use wait_for_ui for text/assertions or changing UI.',
-      ]),
+      createSection(
+        'Tips',
+        hints?.runtimeSnapshot?.managedOperation
+          ? [
+              '- Use target refs with tap or type_text and the same operation credentials.',
+              '- Use fresh refs from the latest action result or snapshot_ui output.',
+              '- After handoff or switching runtimes, run snapshot_ui again.',
+            ]
+          : [
+              '- Use target refs with tap, type_text, long_press, and touch.',
+              ...(scrollAreaCount > 0 ? ['- Use scroll refs with swipe.'] : []),
+              '- Refs are snapshot-specific; after snapshot_ui or wait_for_ui, use refs from the latest output.',
+              '- Use wait_for_ui for text/assertions or changing UI.',
+            ],
+      ),
     );
     items.push(
       ...createStandardDiagnosticSections(result.diagnostics),

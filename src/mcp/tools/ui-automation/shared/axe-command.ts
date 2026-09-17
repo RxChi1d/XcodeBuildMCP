@@ -28,7 +28,8 @@ export async function executeAxeCommand(
     throw new DependencyError('AXe binary not found');
   }
 
-  const fullArgs = [...commandArgs, '--udid', simulatorId];
+  // AXe matches CoreSimulator's uppercase UDIDs case-sensitively.
+  const fullArgs = [...commandArgs, '--udid', simulatorId.toUpperCase()];
   const fullCommand = [axeBinary, ...fullArgs];
 
   try {

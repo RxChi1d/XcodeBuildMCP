@@ -1,4 +1,6 @@
 export type ToolDomainResultKind =
+  | 'resource-binding'
+  | 'resource-operation'
   | 'error'
   | 'app-path'
   | 'build-result'
@@ -696,6 +698,8 @@ export type WorkflowSelectionDomainResult = ToolDomainResultBase & {
   registeredToolCount: number;
 };
 export type ToolDomainResult =
+  | ResourceBindingDomainResult
+  | ResourceOperationDomainResult
   | ErrorDomainResult
   | AppPathDomainResult
   | BuildResultDomainResult
@@ -729,3 +733,23 @@ export type ToolDomainResult =
   | XcodeBridgeStatusDomainResult
   | XcodeBridgeSyncDomainResult
   | XcodeBridgeToolListDomainResult;
+
+export interface ResourceOperationDomainResult extends ToolDomainResultBase {
+  kind: 'resource-operation';
+  action: 'begin' | 'poll' | 'status' | 'end' | 'cancel';
+  requestId: string;
+  sessionId: string;
+  simulatorId: string;
+  state: 'waiting' | 'active' | 'closing' | 'blocked' | 'released' | 'cancelled';
+  activityCount: number;
+  token?: string;
+  reason?: string;
+}
+
+export interface ResourceBindingDomainResult extends ToolDomainResultBase {
+  kind: 'resource-binding';
+  worktreeGeneration: string;
+  simulatorId: string | null;
+  deviceType: string;
+  runtime: string;
+}

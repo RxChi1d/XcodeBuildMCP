@@ -14,6 +14,10 @@ import {
 import { determineSimulatorUuid } from '../../../utils/simulator-utils.ts';
 import { toErrorMessage } from '../../../utils/errors.ts';
 import { createBasicDiagnostics } from '../../../utils/diagnostics.ts';
+import {
+  bootManagedSimulator,
+  SimulatorBootPreflightFailure,
+} from '../../../resource-management/boot.ts';
 
 const baseSchemaObject = z.object({
   simulatorId: z
@@ -125,6 +129,28 @@ export async function boot_simLogic(
   executor: CommandExecutor,
 ): Promise<void> {
   const ctx = getHandlerContext();
+  if (ctx.managedOperation) {
+    if (!params.simulatorId) throw new Error('Managed boot requires an explicit Simulator UUID');
+    ctx.nextSteps = [];
+    try {
+      await bootManagedSimulator(params.simulatorId, executor);
+      setStructuredOutput(
+        ctx,
+        createBootSimResult({ simulatorId: params.simulatorId, didError: false }),
+      );
+    } catch (error) {
+      if (!(error instanceof SimulatorBootPreflightFailure)) throw error;
+      setStructuredOutput(
+        ctx,
+        createBootSimResult({
+          simulatorId: params.simulatorId,
+          didError: true,
+          error: error.message,
+        }),
+      );
+    }
+    return;
+  }
   const simulatorResult = await determineSimulatorUuid(params, executor);
   if (simulatorResult.error || !simulatorResult.uuid) {
     const result = createBootSimResult({

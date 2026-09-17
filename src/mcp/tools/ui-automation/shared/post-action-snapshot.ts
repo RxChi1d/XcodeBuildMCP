@@ -1,4 +1,6 @@
 import type { CapturePayload } from '../../../../types/domain-results.ts';
+import { isCommandSupervised } from '../../../../resource-management/execution.ts';
+import { DependencyError, SystemError } from '../../../../utils/errors.ts';
 import type {
   RuntimeSnapshotRecord,
   UiAutomationRecoverableError,
@@ -134,6 +136,8 @@ export async function captureRuntimeSnapshotAfterActionSafely(params: {
     };
   } catch (error) {
     clearRuntimeSnapshot(params.simulatorId);
+    if (isCommandSupervised() && (error instanceof DependencyError || error instanceof SystemError))
+      throw error;
 
     const isParseFailure = error instanceof RuntimeSnapshotParseError;
     const isSettleTimeout = error instanceof RuntimeSnapshotSettleTimeoutError;

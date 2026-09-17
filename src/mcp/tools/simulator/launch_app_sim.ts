@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { launchManagedSimulatorApp } from '../../../resource-management/launch.ts';
 import type { LaunchResultDomainResult } from '../../../types/domain-results.ts';
 import type { NonStreamingExecutor } from '../../../types/tool-execution.ts';
 import { log } from '../../../utils/logging/index.ts';
@@ -79,6 +80,16 @@ export async function launch_app_simLogic(
   launcher: SimulatorLauncher = launchSimulatorAppWithLogging,
 ): Promise<void> {
   const ctx = getHandlerContext();
+  if (ctx.managedOperation) {
+    if (!params.simulatorId) throw new Error('Managed launch requires an explicit Simulator UUID');
+    ctx.nextSteps = [];
+    const result = await launchManagedSimulatorApp(
+      { ...params, simulatorId: params.simulatorId },
+      executor,
+    );
+    setLaunchResultStructuredOutput(ctx, result);
+    return;
+  }
   const simulatorResult = await determineSimulatorUuid(params, executor);
   if (simulatorResult.error || !simulatorResult.uuid) {
     const result = buildLaunchFailure(

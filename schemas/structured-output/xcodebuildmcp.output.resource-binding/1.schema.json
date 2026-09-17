@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xcodebuildmcp.com/schemas/structured-output/xcodebuildmcp.output.resource-binding/1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "$ref": "https://xcodebuildmcp.com/schemas/structured-output/_defs/common.schema.json#/$defs/errorConsistency"
+    },
+    {
+      "if": {
+        "properties": {
+          "didError": {
+            "const": false
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "properties": {
+              "simulatorId": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "schema": {
+      "const": "xcodebuildmcp.output.resource-binding"
+    },
+    "schemaVersion": {
+      "const": "1"
+    },
+    "didError": {
+      "type": "boolean"
+    },
+    "error": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "worktreeGeneration": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "simulatorId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deviceType": {
+          "type": "string"
+        },
+        "runtime": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "worktreeGeneration",
+        "simulatorId",
+        "deviceType",
+        "runtime"
+      ]
+    },
+    "nextSteps": {
+      "$ref": "https://xcodebuildmcp.com/schemas/structured-output/_defs/common.schema.json#/$defs/nextSteps"
+    }
+  },
+  "required": [
+    "schema",
+    "schemaVersion",
+    "didError",
+    "error",
+    "data"
+  ]
+}

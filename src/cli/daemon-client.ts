@@ -18,7 +18,11 @@ import {
   type XcodeIdeInvokeParams,
   type XcodeIdeInvokeResult,
 } from '../daemon/protocol.ts';
-import { getSocketPath } from '../daemon/socket-path.ts';
+import { getSocketPath, assertManagedSocketPath } from '../daemon/socket-path.ts';
+import {
+  resourceEnvironment,
+  assertResourceNamespace,
+} from '../resource-management/environment.ts';
 import type { AnyFragment } from '../types/domain-fragments.ts';
 
 export class DaemonVersionMismatchError extends Error {
@@ -43,6 +47,7 @@ export class DaemonClient {
 
   constructor(opts: DaemonClientOptions = {}) {
     this.socketPath = opts.socketPath ?? getSocketPath();
+    assertManagedSocketPath(this.socketPath);
     this.timeout = opts.timeout ?? 30000;
   }
 
@@ -131,6 +136,7 @@ export class DaemonClient {
    * Stop the daemon.
    */
   async stop(): Promise<void> {
+    if (resourceEnvironment()) assertResourceNamespace((await this.status()).resourceNamespace);
     await this.request<{ ok: boolean }>('daemon.stop');
   }
 
@@ -149,6 +155,8 @@ export class DaemonClient {
     args: Record<string, unknown>,
     options: InvokeToolOptions = {},
   ): Promise<ToolInvokeResult> {
+    const managed = resourceEnvironment();
+    if (managed) assertResourceNamespace((await this.status()).resourceNamespace);
     const id = randomUUID();
     const req: DaemonRequest<ToolInvokeParams> = {
       v: DAEMON_PROTOCOL_VERSION,
@@ -157,6 +165,7 @@ export class DaemonClient {
       params: {
         tool,
         args,
+        ...(managed ? { resourceNamespace: managed.namespace } : {}),
       },
     };
 

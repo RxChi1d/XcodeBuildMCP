@@ -206,4 +206,85 @@ describe('inferPlatform', () => {
       ),
     ).rejects.toThrow(/Unable to determine the simulator platform/);
   });
+
+  it('matches cached simulatorPlatform when selector UUID differs by case', async () => {
+    sessionStore.setDefaults({
+      simulatorId: '65faa1dc-6dc9-456d-a88e-3cf5a516f95b',
+      simulatorPlatform: XcodePlatform.iOSSimulator,
+    });
+
+    const executor = createMockExecutor(new Error('Executor should not be called'));
+    const result = await inferPlatform(
+      { simulatorId: '65FAA1DC-6DC9-456D-A88E-3CF5A516F95B' },
+      executor,
+    );
+
+    expect(result.platform).toBe(XcodePlatform.iOSSimulator);
+    expect(result.source).toBe('simulator-platform-cache');
+  });
+
+  it('matches simctl catalog UDID case-insensitively when catalog emits uppercase UDID', async () => {
+    const mockExecutor: CommandExecutor = async () =>
+      createMockCommandResponse({
+        success: true,
+        output: JSON.stringify({
+          devices: {
+            'com.apple.CoreSimulator.SimRuntime.iOS-18-0': [
+              {
+                udid: '65FAA1DC-6DC9-456D-A88E-3CF5A516F95B',
+                name: 'iPhone 16 Pro',
+                isAvailable: true,
+              },
+            ],
+          },
+        }),
+      });
+
+    const result = await inferPlatform(
+      { simulatorId: '65faa1dc-6dc9-456d-a88e-3cf5a516f95b' },
+      mockExecutor,
+    );
+
+    expect(result.platform).toBe(XcodePlatform.iOSSimulator);
+    expect(result.source).toBe('simulator-runtime');
+  });
+
+  it('preserves case-sensitivity for simulatorName in cache and catalog lookup', async () => {
+    sessionStore.setDefaults({
+      simulatorName: 'iPhone 17 Pro',
+      simulatorPlatform: XcodePlatform.iOSSimulator,
+    });
+
+    // Cache should not match because simulatorName is case-sensitive
+    const mockExecutor: CommandExecutor = async () =>
+      createMockCommandResponse({
+        success: true,
+        output: JSON.stringify({
+          devices: {
+            'com.apple.CoreSimulator.SimRuntime.iOS-18-0': [
+              {
+                udid: 'SIM-UUID',
+                name: 'iPhone 17 Pro',
+                isAvailable: true,
+              },
+            ],
+          },
+        }),
+      });
+
+    // simulatorName 'iphone 17 pro' does not match cache 'iPhone 17 Pro'
+    // but simctl matching also requires exact case for name, falling back to name heuristic
+    const result = await inferPlatform({ simulatorName: 'iPhone 17 Pro' }, mockExecutor);
+    expect(result.source).toBe('simulator-platform-cache');
+
+    const resultDifferentCase = await inferPlatform(
+      { simulatorName: 'iphone 17 pro' },
+      mockExecutor,
+    );
+    // Did not match cache, falls through to simctl which requires exact case for name,
+    // and therefore falls back to simulator-name heuristic (NOT simulator-runtime)
+    expect(resultDifferentCase.source).toBe('simulator-name');
+    expect(resultDifferentCase.source).not.toBe('simulator-runtime');
+    expect(resultDifferentCase.source).not.toBe('simulator-platform-cache');
+  });
 });

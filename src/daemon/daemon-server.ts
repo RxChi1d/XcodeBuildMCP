@@ -29,6 +29,10 @@ import {
 } from '../integrations/xcode-tools-bridge/bridge-tool-result.ts';
 import { toLocalToolName } from '../integrations/xcode-tools-bridge/registry.ts';
 import { toBridgeCallResultDomainResult } from '../mcp/tools/xcode-ide/shared.ts';
+import {
+  resourceEnvironment,
+  assertResourceNamespace,
+} from '../resource-management/environment.ts';
 
 export interface DaemonServerContext {
   socketPath: string;
@@ -139,6 +143,9 @@ export function startDaemonServer(ctx: DaemonServerContext): net.Server {
                 workspaceRoot: ctx.workspaceRoot,
                 workspaceKey: ctx.workspaceKey,
                 instanceId: ctx.instanceId,
+                ...(resourceEnvironment()
+                  ? { resourceNamespace: resourceEnvironment()!.namespace }
+                  : {}),
               };
               return writeFrame(socket, { ...base, result });
             }
@@ -164,6 +171,7 @@ export function startDaemonServer(ctx: DaemonServerContext): net.Server {
 
             case 'tool.invoke': {
               const params = req.params as ToolInvokeParams;
+              assertResourceNamespace(params?.resourceNamespace);
               if (!params?.tool) {
                 return writeFrame(socket, {
                   ...base,
@@ -230,6 +238,8 @@ export function startDaemonServer(ctx: DaemonServerContext): net.Server {
             }
 
             case 'xcode-ide.list': {
+              if (resourceEnvironment())
+                throw new Error('Xcode bridge is unsupported with managed resources');
               if (!ctx.xcodeIdeWorkflowEnabled) {
                 return writeFrame(socket, {
                   ...base,
@@ -265,6 +275,8 @@ export function startDaemonServer(ctx: DaemonServerContext): net.Server {
             }
 
             case 'xcode-ide.invoke': {
+              if (resourceEnvironment())
+                throw new Error('Xcode bridge is unsupported with managed resources');
               if (!ctx.xcodeIdeWorkflowEnabled) {
                 return writeFrame(socket, {
                   ...base,

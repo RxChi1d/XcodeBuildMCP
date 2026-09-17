@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { isCommandSupervised } from '../../../resource-management/execution.ts';
 import { log } from '../../../utils/logging/index.ts';
 import type { CommandExecutor } from '../../../utils/execution/index.ts';
 import { getDefaultCommandExecutor } from '../../../utils/execution/index.ts';
@@ -93,7 +94,7 @@ export function createSnapshotUiExecutor(
         recordRuntimeSnapshot(snapshot);
         log('info', `${LOG_PREFIX}/${toolName}: Success for ${simulatorId}`);
 
-        if (params.sinceScreenHash === snapshot.screenHash) {
+        if (!isCommandSupervised() && params.sinceScreenHash === snapshot.screenHash) {
           return createCaptureSuccessResult(simulatorId, {
             capture: {
               type: 'runtime-snapshot-unchanged',

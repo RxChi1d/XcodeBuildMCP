@@ -1,4 +1,6 @@
 import { COMPACT_RUNTIME_TARGET_LIMIT } from '../../../../types/ui-snapshot.ts';
+import { randomUUID } from 'node:crypto';
+import { isCommandSupervised } from '../../../../resource-management/execution.ts';
 import type {
   RuntimeActionNameV1,
   RuntimeElementResolution,
@@ -17,6 +19,7 @@ export async function withSimulatorUiAutomationTransaction<T>(
   simulatorId: string,
   transaction: () => Promise<T>,
 ): Promise<T> {
+  simulatorId = simulatorId.toLowerCase();
   const previousTransaction = simulatorUiAutomationQueues.get(simulatorId) ?? Promise.resolve();
   let releaseCurrentTransaction!: () => void;
   const currentTransaction = new Promise<void>((resolve) => {
@@ -77,16 +80,38 @@ function isActionableCandidateForRequiredActions(
 }
 
 export function recordRuntimeSnapshot(snapshot: RuntimeSnapshotRecord): RuntimeSnapshotRecord {
-  const nextSeq = (runtimeSnapshotSeqs.get(snapshot.simulatorId) ?? 0) + 1;
-  runtimeSnapshotSeqs.set(snapshot.simulatorId, nextSeq);
+  const key = snapshot.simulatorId.toLowerCase();
+  if (isCommandSupervised()) {
+    // Keep the published e<digits> format while making refs unique to this capture.
+    const prefix = BigInt(`0x${randomUUID().replaceAll('-', '')}`)
+      .toString()
+      .padStart(39, '0');
+    const refs = new Map<string, string>();
+    for (const element of snapshot.elements) {
+      const oldRef = element.publicElement.ref;
+      const ref = `e1${prefix}${oldRef.slice(1)}`;
+      refs.set(oldRef, ref);
+      element.publicElement.ref = ref;
+    }
+    snapshot.elementsByRef = new Map(
+      snapshot.elements.map((element) => [element.publicElement.ref, element]),
+    );
+    for (const action of snapshot.payload.actions) {
+      const ref = refs.get(action.elementRef);
+      if (!ref) throw new Error('Snapshot action has no matching element');
+      action.elementRef = ref;
+    }
+  }
+  const nextSeq = (runtimeSnapshotSeqs.get(key) ?? 0) + 1;
+  runtimeSnapshotSeqs.set(key, nextSeq);
   snapshot.seq = nextSeq;
   snapshot.payload.seq = nextSeq;
-  runtimeSnapshots.set(snapshot.simulatorId, snapshot);
+  runtimeSnapshots.set(key, snapshot);
   return snapshot;
 }
 
 export function clearRuntimeSnapshot(simulatorId: string): void {
-  runtimeSnapshots.delete(simulatorId);
+  runtimeSnapshots.delete(simulatorId.toLowerCase());
 }
 
 export function __resetRuntimeSnapshotStoreForTests(): void {
@@ -99,6 +124,7 @@ export function getRuntimeSnapshotLookup(
   simulatorId: string,
   nowMs = Date.now(),
 ): RuntimeSnapshotLookup {
+  simulatorId = simulatorId.toLowerCase();
   const snapshot = runtimeSnapshots.get(simulatorId) ?? null;
   if (!snapshot) {
     return { status: 'missing', snapshot: null };

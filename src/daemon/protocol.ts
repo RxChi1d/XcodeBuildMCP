@@ -42,6 +42,7 @@ export interface DaemonResponse<TResult = unknown> {
 export interface ToolInvokeParams {
   tool: string;
   args: Record<string, unknown>;
+  resourceNamespace?: string;
 }
 
 export type ToolInvokeProgressStream = { kind: 'fragment'; fragment: AnyFragment };
@@ -86,6 +87,7 @@ export interface DaemonStatusResult {
   workspaceKey: string;
   /** Opaque identity for this daemon process instance. */
   instanceId?: string;
+  resourceNamespace?: string;
 }
 
 export interface ToolListItem {
