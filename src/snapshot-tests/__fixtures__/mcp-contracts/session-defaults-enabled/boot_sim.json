@@ -1,6 +1,6 @@
 {
   "annotations": {"destructiveHint":false,"openWorldHint":false,"readOnlyHint":false,"title":"Boot Simulator"},
-  "description": "Boot iOS simulator for manual/non-build flows. Not required before simulator build-and-run (build_run_sim).",
+  "description": "Boot iOS simulator for manual/non-build flows. Not required before simulator build-and-run (build_run_sim). In managed mode, requires an operation lease and waits for boot readiness.",
   "execution": {"taskSupport":"forbidden"},
   "inputSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",

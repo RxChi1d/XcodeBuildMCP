@@ -1,6 +1,6 @@
 {
   "annotations": {"destructiveHint":false,"openWorldHint":false,"readOnlyHint":true,"title":"Type Text"},
-  "description": "Type text into a UI element by elementRef from a current rs/1 runtime snapshot, optionally replacing existing field contents. elementRef is required; do not call with only text. Example input: {\"elementRef\":\"e8\",\"text\":\"London\",\"replaceExisting\":true}.",
+  "description": "Type text into a UI element by elementRef from a current rs/1 runtime snapshot, optionally replacing existing field contents. In managed mode, requires operation credentials and a ref from this operation and runtime; use fresh refs returned after each action. elementRef is required; do not call with only text. Example input: {\"elementRef\":\"e8\",\"text\":\"London\",\"replaceExisting\":true}.",
   "execution": {"taskSupport":"forbidden"},
   "inputSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",

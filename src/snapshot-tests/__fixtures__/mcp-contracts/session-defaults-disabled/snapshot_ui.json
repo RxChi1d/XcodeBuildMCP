@@ -1,6 +1,6 @@
 {
   "annotations": {"destructiveHint":false,"openWorldHint":false,"readOnlyHint":true,"title":"Snapshot UI"},
-  "description": "Capture a semantic rs/1 runtime UI snapshot with elementRef targets. Observe once, use tap for one target or batch for multiple same-screen targets, and refresh after navigation, scrolling, sheet changes, or obvious layout changes.",
+  "description": "Capture a semantic rs/1 runtime UI snapshot with elementRef targets. In managed mode, requires operation credentials and always returns a full snapshot with fresh refs; batch and wait_for_ui are not yet supported. Observe once, use tap for one target or batch for multiple same-screen targets, and refresh after navigation, scrolling, sheet changes, or obvious layout changes.",
   "execution": {"taskSupport":"forbidden"},
   "inputSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",
