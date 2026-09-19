@@ -637,6 +637,10 @@ export class SimulatorResourceManager {
       if (operation.state === 'waiting') {
         if (!cancel) throw new Error('Cancel a waiting request instead of ending it');
         operation.state = 'cancelled';
+      } else if (operation.state === 'blocked') {
+        throw new Error(
+          'Operation is blocked; end/cancel cannot recover it and no managed unblock action is available',
+        );
       } else if (operation.state === 'active' || operation.state === 'closing') {
         operation.state = operation.activities.length ? 'closing' : 'released';
       }

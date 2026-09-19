@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createSimulatorTwoPhaseExecutionPlan } from '../simulator-test-execution.ts';
+import {
+  createSimulatorTwoPhaseExecutionPlan,
+  validateManagedTestExtraArgs,
+} from '../simulator-test-execution.ts';
 import type { TestPreflightResult } from '../test-preflight.ts';
 
 function createPreflight(): TestPreflightResult {
@@ -118,5 +121,33 @@ describe('createSimulatorTwoPhaseExecutionPlan', () => {
     expect(plan.buildArgs).toEqual(['-quiet']);
     expect(plan.testArgs).toEqual(['-quiet', '-resultBundlePath', '/tmp/Last.xcresult']);
     expect(plan.resultBundlePath).toBe('/tmp/Last.xcresult');
+  });
+});
+
+describe('validateManagedTestExtraArgs', () => {
+  it('allows only-testing and skip-testing selector forms', () => {
+    expect(() =>
+      validateManagedTestExtraArgs([
+        '-only-testing:CalculatorAppTests/CalculatorAppTests/testAddition',
+        '-skip-testing',
+        'CalculatorAppTests/ExpressionSuite/evaluatesExpression',
+      ]),
+    ).not.toThrow();
+  });
+
+  it.each([
+    ['-destination', 'platform=iOS Simulator,id=UUID'],
+    ['-parallel-testing-enabled', 'YES'],
+    ['-resultBundlePath', '/tmp/result.xcresult'],
+  ])('rejects execution or destination override %s', (...args) => {
+    expect(() => validateManagedTestExtraArgs(args)).toThrow(
+      'only allow -only-testing and -skip-testing selectors',
+    );
+  });
+
+  it('rejects a selector without a value', () => {
+    expect(() => validateManagedTestExtraArgs(['-only-testing'])).toThrow(
+      'require a selector value',
+    );
   });
 });

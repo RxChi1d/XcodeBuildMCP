@@ -19,7 +19,10 @@ import type { CommandExecutor, CommandResponse, CommandExecOptions } from './com
 import { getDefaultCommandExecutor } from './command.ts';
 import { type TestPreflightResult } from './test-preflight.ts';
 
-import { createSimulatorTwoPhaseExecutionPlan } from './simulator-test-execution.ts';
+import {
+  createSimulatorTwoPhaseExecutionPlan,
+  validateManagedTestExtraArgs,
+} from './simulator-test-execution.ts';
 import { parseResultBundlePathArgs } from './result-bundle-args.ts';
 import {
   createDefaultResultBundlePath,
@@ -277,9 +280,7 @@ function createSupervisedXcodeBuildExecutor(
 }
 
 function validateSupervisedSourceTestParams(params: SharedTestExecutorParams): void {
-  if (params.extraArgs && params.extraArgs.length > 0) {
-    throw new Error('Supervised simulator test runs do not allow extraArgs');
-  }
+  validateManagedTestExtraArgs(params.extraArgs);
 
   const isSimulator = [
     XcodePlatform.iOSSimulator,

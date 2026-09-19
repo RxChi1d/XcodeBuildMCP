@@ -12,6 +12,7 @@ import { SimulatorReadinessUncertainError } from './boot.ts';
 import { SimulatorLaunchUncertainError } from './launch.ts';
 import { SimulatorTestUncertainError } from './test-execution.ts';
 import { clearRuntimeSnapshot } from '../mcp/tools/ui-automation/shared/snapshot-ui-state.ts';
+import { validateManagedTestExtraArgs } from '../utils/simulator-test-execution.ts';
 
 const runtimeId = randomUUID();
 const snapshotProvenance = new Map<
@@ -178,11 +179,13 @@ export function wrapManagedTool(
         }
         if (moduleId === 'mcp/tools/simulator/test_sim') {
           const testParams = params as Record<string, unknown>;
-          if (
-            testParams.extraArgs !== undefined &&
-            (!Array.isArray(testParams.extraArgs) || testParams.extraArgs.length > 0)
-          ) {
-            throw new Error('Managed simulator tests do not allow extraArgs');
+          if (testParams.extraArgs !== undefined) {
+            if (!Array.isArray(testParams.extraArgs)) {
+              throw new Error(
+                'Managed simulator tests only allow -only-testing and -skip-testing selectors in extraArgs',
+              );
+            }
+            validateManagedTestExtraArgs(testParams.extraArgs);
           }
           if (testParams.testProductsPath !== undefined || testParams.xctestrunPath !== undefined) {
             throw new Error('Managed simulator tests do not support prepared test artifacts');

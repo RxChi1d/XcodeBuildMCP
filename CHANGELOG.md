@@ -21,6 +21,8 @@
 - Fixed managed build and test admission to require exactly one explicit nonblank project or workspace input together with a nonblank scheme and bound Simulator UUID.
 - Fixed daemon socket resolution so an explicit `XCODEBUILDMCP_SOCKET` is honored before ordinary workspace discovery, while managed mode continues to validate the isolated workspace and resource namespace.
 - Fixed managed activity completion to persist retry and replay receipts before compacting the operation header, and to wait through lock contention instead of abandoning finalization at the normal 10-second transaction deadline.
+- Fixed `resource_operation` end and cancel calls from reporting success without changing a blocked operation; blocked leases now return an explicit no-recovery error.
+- Fixed managed `test_sim` to allow safe `-only-testing` and `-skip-testing` selectors while continuing to reject destination and execution-policy overrides.
 
 ## [2.7.0]
 

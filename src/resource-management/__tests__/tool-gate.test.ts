@@ -188,7 +188,9 @@ it.each(['rejection', 'open-stream'])(
     await expect(
       run({ ...credentials(), simulatorId: lease.simulatorId }, context()),
     ).rejects.toThrow();
-    expect((await manager.end(lease)).state).toBe('blocked');
+    await expect(manager.end(lease)).rejects.toThrow(
+      'Operation is blocked; end/cancel cannot recover it',
+    );
     expect((await manager.getStatus(lease.requestId)).activities).toHaveLength(1);
     stream.destroy();
   },

@@ -198,7 +198,9 @@ it.each(['pre-reject', 'pre-open', 'exit', 'reject', 'open', 'unknown-exit'] as 
         'completion could not be confirmed',
       );
       expect(calls).toHaveLength(failure.startsWith('pre-') ? 1 : 2);
-      expect((await manager.end(lease)).state).toBe('blocked');
+      await expect(manager.end(lease)).rejects.toThrow(
+        'Operation is blocked; end/cancel cannot recover it',
+      );
       expect((await manager.getStatus(lease.requestId)).activities).toHaveLength(1);
     } finally {
       stream.destroy();
@@ -217,7 +219,9 @@ it.each([
   await expect(launch(credentials(), context())).rejects.toThrow(
     'completion could not be confirmed',
   );
-  expect((await manager.end(lease)).state).toBe('blocked');
+  await expect(manager.end(lease)).rejects.toThrow(
+    'Operation is blocked; end/cancel cannot recover it',
+  );
 });
 
 it.each(['success', 'failure'])('drains closing launch before handoff: %s', async (outcome) => {

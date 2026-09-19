@@ -680,7 +680,23 @@ describe('Managed test_sim integration and lifecycle gate', () => {
     expect((await manager.getStatus(lease.requestId)).activities).toHaveLength(0);
   });
 
-  it('rejects non-empty extraArgs and preferXcodebuild=false (explicit and session defaults) with 0 commands', async () => {
+  it('allows test selectors while keeping the managed destination and execution policy', async () => {
+    setupSyncExtractSentinels();
+    const { calls, root } = commands();
+    const selector = '-only-testing:TestAppTests/TestAppTests/testExample';
+
+    await testTool({ ...defaultTestParams(root), extraArgs: [selector] }, context());
+
+    const xcodebuildCalls = calls.filter((command) => command[0] === 'xcodebuild');
+    expect(xcodebuildCalls).toHaveLength(2);
+    expect(xcodebuildCalls[0]).toContain(selector);
+    expect(xcodebuildCalls[1]).toContain(selector);
+    expect(xcodebuildCalls[1]).toContain('-parallel-testing-enabled');
+    expect(xcodebuildCalls[1]).toContain('-maximum-concurrent-test-simulator-destinations');
+    expect((await manager.end(lease)).state).toBe('released');
+  });
+
+  it('rejects unsafe extraArgs and preferXcodebuild=false (explicit and session defaults) with 0 commands', async () => {
     const { calls, root } = commands();
     const base = defaultTestParams(root);
 
@@ -823,7 +839,9 @@ describe('Managed test_sim integration and lifecycle gate', () => {
     const status = await manager.getStatus(lease.requestId);
     expect(status.state).toBe('blocked');
     expect(status.activities).toHaveLength(1);
-    expect((await manager.end(lease)).state).toBe('blocked');
+    await expect(manager.end(lease)).rejects.toThrow(
+      'Operation is blocked; end/cancel cannot recover it',
+    );
     expect((await manager.poll(waiting)).state).toBe('waiting');
   });
 
@@ -904,7 +922,9 @@ describe('Managed test_sim integration and lifecycle gate', () => {
       const status = await manager.getStatus(lease.requestId);
       expect(status.state).toBe('blocked');
       expect(status.activities).toHaveLength(1);
-      expect((await manager.end(lease)).state).toBe('blocked');
+      await expect(manager.end(lease)).rejects.toThrow(
+        'Operation is blocked; end/cancel cannot recover it',
+      );
       expect((await manager.poll(waiting)).state).toBe('waiting');
     },
   );
@@ -949,7 +969,9 @@ describe('Managed test_sim integration and lifecycle gate', () => {
     const status = await manager.getStatus(lease.requestId);
     expect(status.state).toBe('blocked');
     expect(status.activities).toHaveLength(1);
-    expect((await manager.end(lease)).state).toBe('blocked');
+    await expect(manager.end(lease)).rejects.toThrow(
+      'Operation is blocked; end/cancel cannot recover it',
+    );
     expect((await manager.poll(waiting)).state).toBe('waiting');
 
     // Subsequent shutdown was not called

@@ -203,7 +203,9 @@ it.each([
     await expect(boot(credentials(), context())).rejects.toThrow(
       'completion could not be confirmed',
     );
-    expect((await manager.end(lease)).state).toBe('blocked');
+    await expect(manager.end(lease)).rejects.toThrow(
+      'Operation is blocked; end/cancel cannot recover it',
+    );
     expect((await manager.getStatus(lease.requestId)).activities).toHaveLength(1);
     expect(calls).toHaveLength(
       failure === 'pre-open' || failure === 'pre-reject' ? 1 : failure === 'post-json' ? 3 : 2,
@@ -219,7 +221,9 @@ it('releases a malformed read-only preflight but blocks unverified post-boot sta
   expect((await manager.getStatus(lease.requestId)).activities).toHaveLength(0);
   commands({ postState: 'Booting' });
   await expect(boot(credentials(), context())).rejects.toThrow();
-  expect((await manager.end(lease)).state).toBe('blocked');
+  await expect(manager.end(lease)).rejects.toThrow(
+    'Operation is blocked; end/cancel cannot recover it',
+  );
 });
 
 it('releases a confirmed nonzero read-only preflight failure', async () => {

@@ -939,7 +939,13 @@ describe('lease lifecycle', () => {
     await manager.startCall(current, target(), call);
     await manager.block(current, 'Lost supervision of child process');
     await manager.finishActivity(current, call.id, call.runtimeId);
-    expect((await manager.end(current)).state).toBe('blocked');
+    await expect(manager.end(current)).rejects.toThrow(
+      'Operation is blocked; end/cancel cannot recover it',
+    );
+    await expect(manager.cancel(current)).rejects.toThrow(
+      'Operation is blocked; end/cancel cannot recover it',
+    );
+    expect((await manager.getStatus(current.requestId)).state).toBe('blocked');
     expect((await manager.requestLease(request())).state).toBe('waiting');
   });
 

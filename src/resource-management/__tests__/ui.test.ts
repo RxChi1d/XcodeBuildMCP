@@ -284,7 +284,9 @@ it.each(['open', 'reject'] as const)(
         }),
       ).rejects.toThrow('completion could not be confirmed');
       expect(calls.map((cmd) => cmd[1])).toEqual(['tap']);
-      expect((await manager.end(lease)).state).toBe('blocked');
+      await expect(manager.end(lease)).rejects.toThrow(
+        'Operation is blocked; end/cancel cannot recover it',
+      );
     } finally {
       stream.destroy();
     }
@@ -300,7 +302,9 @@ it('blocks when refreshed capture completion is uncertain after a successful tap
       'completion could not be confirmed',
     );
     expect(calls.map((cmd) => cmd[1])).toEqual(['tap', 'describe-ui']);
-    expect((await manager.end(lease)).state).toBe('blocked');
+    await expect(manager.end(lease)).rejects.toThrow(
+      'Operation is blocked; end/cancel cannot recover it',
+    );
   } finally {
     stream.destroy();
   }

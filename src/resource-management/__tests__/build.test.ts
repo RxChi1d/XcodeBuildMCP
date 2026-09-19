@@ -518,7 +518,9 @@ describe('Managed build_sim', () => {
       try {
         await expect(build(defaultBuildParams(root), context())).rejects.toThrow();
         expect((await manager.getStatus(lease.requestId)).state).toBe('blocked');
-        expect((await manager.end(lease)).state).toBe('blocked');
+        await expect(manager.end(lease)).rejects.toThrow(
+          'Operation is blocked; end/cancel cannot recover it',
+        );
       } finally {
         stream.destroy();
       }

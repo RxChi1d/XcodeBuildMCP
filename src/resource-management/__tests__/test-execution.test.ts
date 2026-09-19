@@ -2144,7 +2144,9 @@ describe('createTestExecutor lifecycle and supervision contract', () => {
             streamingCtx,
           ),
         ),
-      ).rejects.toThrow('Supervised simulator test runs do not allow extraArgs');
+      ).rejects.toThrow(
+        'Managed simulator tests only allow -only-testing and -skip-testing selectors in extraArgs',
+      );
 
       expect(mockExecutor).not.toHaveBeenCalled();
       expect(createLogSpy).not.toHaveBeenCalled();
@@ -2180,7 +2182,9 @@ describe('createTestExecutor lifecycle and supervision contract', () => {
             streamingCtx,
           ),
         ),
-      ).rejects.toThrow('Supervised simulator test runs do not allow extraArgs');
+      ).rejects.toThrow(
+        'Managed simulator tests only allow -only-testing and -skip-testing selectors in extraArgs',
+      );
 
       expect(mockExecutor).not.toHaveBeenCalled();
       expect(createLogSpy).not.toHaveBeenCalled();
